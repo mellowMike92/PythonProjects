@@ -60,12 +60,12 @@ def encodeFiles(PATH):
     conn.execute(command)
     conn.commit()
 
-PASSWORD = "123"
+PASSWORD = "password"
 
 connect = getpass.getpass(prompt="Enter Password\n")
 
 while connect != PASSWORD:
-    connect = getpass.getpass(prompt="What is your password?\n")
+    connect = getpass.getpass(prompt="Please enter your password:\n")
     if connect == "q":
         break
 
@@ -78,9 +78,9 @@ if connect == PASSWORD:
             NAME TEXT NOT NULL,
             EXTENSION TEXT NOT NULL,
             FILES TEXT NOT NULL);''')
-        print("Your safe has been created!\nWhat would you like to store in it today?")
+        print("Database created.  What would you like to do?")
     except:
-        print("You have a safe, what would you like to do today?")
+        print("Database found.  What would you like to do?")
 
     while True:
         print("\n" + "*" * 15)
