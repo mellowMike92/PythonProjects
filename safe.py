@@ -156,6 +156,8 @@ if connect == PASSWORD:
 
             # Performs check to decide whether or not to decode a bytes text file into a video or audio file.
             if file_type == "mp4" or file_type == "mp3":
+                with open(file_name + ".txt", 'wb') as f_output:
+                    f_output.write(base64.b64decode(file_string)) 
                 # Decodes the requested audio or video file as the text file in which the byte information 
                 # was initially stored using the 'uu' Python library.
                 uu.decode(file_name + ".txt", FILE_)
@@ -197,6 +199,8 @@ if connect == PASSWORD:
                     
                 
                 if file_type == "mp4" or file_type == "mp3":
+                with open(file_name + ".txt", 'wb') as f_output:
+                    f_output.write(base64.b64decode(file_string))                         
                     # Decodes the requested audio or video file as the text file in which the byte information 
                     # was initially stored using the 'uu' Python library.
                     uu.decode(file_name + ".txt", FILE_)
