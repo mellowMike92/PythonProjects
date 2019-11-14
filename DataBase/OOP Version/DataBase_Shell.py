@@ -4,101 +4,105 @@ import getpass
 
 
 class Main(DataBase):
-
     database_password = '123'
-    database_file_directory = ''
-    sql_file = ''
 
-    def __init__(self, sql_file=None, directory=None):
+    def __init__(self):
         super().__init__(sql_file=None, directory=None)
-        sql = Main._create_new_database()
-        create_random_pw_check = input("Would you like to create a new random password?\t(Y\\N)\n")
-        self._password_creation(create_random_pw_check)
-        print("Database file created in {}".format(Main.database_file_directory))
+        sql = self._create_or_connect_database()
+        self.password_database_init()
         if self.check_password() is True:
             print("Password verified!\n")
             self._print_menu()
+            self.ui_task_exec(sql)
 
-            while True:
-                task = input("\nWhat would you like to do?\n").lower()
-                try:
+    def ui_task_exec(self, sql):
+        while True:
+            task = input("\nWhat would you like to do?\n").lower()
+            try:
 
-                    if task == "rf":
-                        recover_file = input("Please enter the full file name to recover.  "
-                                             "Include the file extension (e.g. myPhoto.jpg)\n")
-                        sql.recover_file(recover_file, Main.sql_file)
+                if task == "rf":
+                    recover_file = input("Please enter the full file name to recover.  "
+                                         "Include the file extension (e.g. myPhoto.jpg)\n")
+                    sql.recover_file(recover_file, self.sql_file)
 
-                    if task == "rd":
-                        recover_directory = input("Please enter the full folder directory to recover.\n")
-                        sql.recover_directory(recover_directory, Main.sql_file)
+                if task == "rd":
+                    recover_directory = input("Please enter the full folder directory to recover.\n")
+                    sql.recover_directory(recover_directory, self.sql_file)
 
-                    if task == "sf":
-                        filename_with_extension = input("Please enter the file name (including "
-                                                        "the extension) to store.\n")
-                        sql.store_file(filename_with_extension, Main.database_file_directory)
+                if task == "sf":
+                    filename_with_extension = input("Please enter the file name (including "
+                                                    "the extension) to store.\n\tFile must be in "
+                                                    "same location as database file.\n")
+                    sql.store_file(filename_with_extension,
+                                   file_directory=self.database_file_directory, sql_file=self.sql_file)
 
-                    if task == "sd":
-                        store_directory_file_path = input("Please enter the folder directory containing "
-                                                          "the files to store.\n")
-                        sql.store_directory(store_directory_file_path, Main.sql_file)
+                if task == "sd":
+                    store_directory_file_path = input("Please enter the folder directory containing "
+                                                      "the files to store.\n")
+                    sql.store_directory(store_directory_file_path, sql_file=self.sql_file)
 
-                    if task == "dr":
-                        delete_all_recovered_confirmation = input(
-                            "\nDelete all files from Recovery Directory? (Y/N)\n"
-                            "(Files will not be deleted from Data Base)\n\n")
-                        sql.delete_all_recovered_files(delete_all_recovered_confirmation, Main.sql_file)
+                if task == "dr":
+                    delete_all_recovered_confirmation = input(
+                        "\nDelete all files from Recovery Directory? (Y/N)\n"
+                        "(Files will not be deleted from Data Base)\n\n")
+                    sql.delete_all_recovered_files(delete_all_recovered_confirmation, self.sql_file)
 
-                    if task == 'df':
-                        delete_file = input("Type in the file name including the extension of the file "
-                                            "you want to delete from the database.  Note: Case-sensitive"
-                                            "\nExample: My_File.txt\n")
-                        sql.delete_one_database_file(delete_file)
+                if task == 'df':
+                    delete_file = input("Type in the file name including the extension of the file "
+                                        "you want to delete from the database.  Note: Case-sensitive"
+                                        "\nExample: My_File.txt\n")
+                    sql.delete_one_database_file(delete_file, self.sql_file)
 
-                    if task == 'da':
-                        delete_all_database_files_confirmation = input("Are you sure you would like to delete all "
-                                                                       "stored files from the database? (Y/N)\n")
+                if task == 'da':
+                    delete_all_database_files_confirmation = input("Are you sure you would like to delete all "
+                                                                   "stored files from the database? (Y/N)\n")
 
-                        sql.delete_all_database_files(delete_all_database_files_confirmation)
+                    sql.delete_all_database_files(delete_all_database_files_confirmation, self.sql_file)
 
-                    if task == 'ls':
-                        sql.list_stored_directories(Main.sql_file)
+                if task == 'ls':
+                    sql.list_stored_directories(self.sql_file)
 
-                    if task == 'help':
-                        Main._print_menu()
+                if task == 'help':
+                    Main._print_menu()
 
-                    if task == 'cwd':
-                        print(os.getcwd())
-                        print(Main.database_file_directory)
+                if task == 'cwd':
+                    print(os.getcwd())
+                    print(self.database_file_directory)
 
-                    if task == "cd":
-                        sql = Main._create_new_database()
+                if task == "cd":
+                    self._create_or_connect_database()
 
-                    if task.startswith('q'):
-                        break
-                except Exception as e:
-                    pass
+                if task.startswith('q'):
+                    break
 
-    @classmethod
-    def _create_new_database(cls):
-        cls.sql_file = input("Enter a database filename to create.\n")
-        if not cls.sql_file.endswith('.db'):
-            cls.sql_file += '.db'
-        Main.database_file_directory = input('Enter a directory to create the file in.\n'
+                else:
+                    continue
+
+            except Exception as e:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
+
+    def password_database_init(self):
+        create_random_pw_check = input("Would you like to create a new random password?\t(Y\\N)\n")
+        self.password_creation(create_random_pw_check)
+        print("Database file created in {}".format(self.database_file_directory))
+        print("Please enter your password.  (Default password is 123)")
+
+    def _create_or_connect_database(self):
+        self.sql_file = input("\nEnter a new database filename to create or"
+                              " an existing database filename to connect to.\n")
+        if not self.sql_file.endswith('.db'):
+            self.sql_file = self.sql_file + '.db'
+        self.database_file_directory = input('Enter a directory to create the file in.\n'
                                              'Type "c" for current directory.\n')
-        if Main.database_file_directory == "c":
-            Main.database_file_directory = os.getcwd()
-        sql = DataBase(cls.sql_file, Main.database_file_directory)
-        sql.create_database_file(cls.sql_file, Main.database_file_directory)
+        if self.database_file_directory == "c":
+            self.database_file_directory = os.getcwd()
+        else:
+            self.database_file_directory = self.database_file_directory
+        sql = DataBase()
+        sql.create_database_file(sql_file=self.sql_file, directory=self.database_file_directory)
         return sql
-
-
-        # directory = input("Please enter directory name (press c for current directory)\n")
-        # sql_file = input("Please enter a database name\n").strip()
-        # if directory.lower() == 'c':
-        #     directory = None
-        # my_created_database = DataBase(sql_file, directory=directory)
-        # my_created_database.create_database_file(directory)
-        # return my_created_database
 
     @staticmethod
     def _print_menu():
@@ -119,42 +123,40 @@ class Main(DataBase):
         print("help = Show all commands")
         print("*" * 15, "\n")
 
-    @classmethod
-    def create_random_password(cls, password_length):
+    def create_random_password(self, password_length):
         selection = "abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()?~=-><\"'[]{}:;"
         password = "".join(random.sample(selection, password_length))
-        print("Write down this password!"+"*"*12+"{}\n"+"*"*12+"\n".format(str(password)))
-        cls.database_password = password
+        print("Write down this password!" + "*" * len(password) + "{}\n" + "*" * len(password) + "\n".format(
+            str(password)))
+        self.database_password = password
 
-    @staticmethod
-    def _password_creation(input_value):
+    def password_creation(self, input_value):
         create_random_pw_check = input_value
         if create_random_pw_check.lower() == "y":
             length = input("Specify password length and hit Enter (12 is recommended)\n").strip()
             while not length.isnumeric():
-                length = input("Specify password length and hit Enter (12 is recommended)\n").strip()
-            Main.create_random_password(length)
+                length = input("Specify password length and hit Enter (12 is recommended)\n")
+            self.create_random_password(int(length))
 
         elif create_random_pw_check.lower() == "n":
             create_specific_pw_check = input("Would you like to create your own password?\t(Y\\N)\n")
             if create_specific_pw_check.lower() == "y":
                 specific_pw = input("Create your password and press Enter\n").strip()
-                Main.database_password = specific_pw
+                self.database_password = specific_pw
             elif create_specific_pw_check.lower() == "n":
                 print("Password creation skipped.\n"
                       "Using default password of 123\n")
 
-    @classmethod
-    def check_password(cls):
+    def check_password(self):
         connect = getpass.getpass(prompt="Please enter your password, or press q followed by Enter to quit:\n")
-        while connect != cls.database_password:
+        while connect != self.database_password:
             connect = getpass.getpass(prompt="Please enter your password, or press q followed by Enter to quit:\n")
             if connect == 'q':
                 break
-        if connect == cls.database_password:
+        if connect == self.database_password:
             return True
 
 
 if __name__ == '__main__':
-    print(os.getcwd())
+    print("You are currently in this directory\t", os.getcwd())
     Main()
