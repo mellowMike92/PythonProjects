@@ -6,7 +6,7 @@ Overview of project:
 I modified the database script from Kalle Hallden's github by adding extended functionality.
 I have also created a refactored, OOP version of the script that can be compiled into an
 executable.
-Working on GUI interface next...
+Working on adding docstrings and will hopefully have a GUI version afterwards...
 
 What the script does:
 
