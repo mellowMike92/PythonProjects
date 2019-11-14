@@ -124,10 +124,16 @@ class Main(DataBase):
         print("*" * 15, "\n")
 
     def create_random_password(self, password_length):
-        selection = "abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()?~=-><\"'[]{}:;"
-        password = "".join(random.sample(selection, password_length))
-        print("Write down this password!" + "*" * len(password) + "{}\n" + "*" * len(password) + "\n".format(
-            str(password)))
+        alphanum_selection = "abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        special_char_selection = "!@#$%^&*()?~=-><\"'[]{}:;"
+
+        half_length = int(password_length)/2
+        password_1 = "".join(random.sample(alphanum_selection, int(half_length)))
+        password_2 = "".join(random.sample(special_char_selection, int(half_length)))
+        password = "".join(random.sample(password_1 + password_2, int(password_length)))
+
+        print("Write down this password!\n\n" + "*" * len(password) + "\n" +
+              password + "\n" + "*" * len(password) + "\n")
         self.database_password = password
 
     def password_creation(self, input_value):
