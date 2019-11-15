@@ -1,4 +1,4 @@
-from DataBase_Tools import *
+from Tools_DataBase import *
 import random
 import getpass
 
@@ -20,54 +20,54 @@ class Main(DataBase):
                                          "Include the file extension (e.g. myPhoto.jpg)\n")
                     sql.recover_file(recover_file, self.sql_file)
 
-                if task == "rd":
+                elif task == "rd":
                     recover_directory = input("Please enter the full folder directory to recover.\n")
                     sql.recover_directory(recover_directory, self.sql_file)
 
-                if task == "sf":
+                elif task == "sf":
                     filename_with_extension = input("Please enter the file name (including "
                                                     "the extension) to store.\n\tFile must be in "
                                                     "same location as database file.\n")
                     sql.store_file(filename_with_extension,
                                    file_directory=self.database_file_directory, sql_file=self.sql_file)
 
-                if task == "sd":
+                elif task == "sd":
                     store_directory_file_path = input("Please enter the folder directory containing "
                                                       "the files to store.\n")
                     sql.store_directory(store_directory_file_path, sql_file=self.sql_file)
 
-                if task == "dr":
+                elif task == "dr":
                     delete_all_recovered_confirmation = input(
                         "\nDelete all files from Recovery Directory? (Y/N)\n"
                         "(Files will not be deleted from Data Base)\n\n")
                     sql.delete_all_recovered_files(delete_all_recovered_confirmation, self.sql_file)
 
-                if task == "df":
+                elif task == "df":
                     delete_file = input("Type in the file name including the extension of the file "
                                         "you want to delete from the database.  Note: Case-sensitive"
                                         "\nExample: My_File.txt\n")
                     sql.delete_one_database_file(delete_file, self.sql_file)
 
-                if task == "da":
+                elif task == "da":
                     delete_all_database_files_confirmation = input("Are you sure you would like to delete all "
                                                                    "stored files from the database? (Y/N)\n")
 
                     sql.delete_all_database_files(delete_all_database_files_confirmation, self.sql_file)
 
-                if task == "ls":
+                elif task == "ls":
                     sql.list_stored_directories(self.sql_file)
 
-                if task == "help":
+                elif task == "help":
                     Main._print_menu()
 
-                if task == "cwd":
+                elif task == "cwd":
                     print(os.getcwd())
                     print(self.database_file_directory)
 
-                if task == "cd":
+                elif task == "cd":
                     self._create_or_connect_database()
 
-                if task.startswith("q"):
+                elif task.startswith("q"):
                     break
 
                 else:
@@ -79,9 +79,11 @@ class Main(DataBase):
                 print(exc_type, fname, exc_tb.tb_lineno)
 
     def create_password_prompt(self):
-        create_random_pw_check = input("Would you like to create a new random password?\t(Y\\N)\n")
-        self.password_creation(create_random_pw_check)
-        print("\nDatabase file created in {}".format(self.database_file_directory))
+        pw_prompt = input("\nWould you like to create a password?  (Y\\N)\n")
+        if pw_prompt.lower() == "y":
+            self.start_password_creation()
+        elif pw_prompt.lower() == "n":
+            return
 
     def _create_or_connect_database(self):
         self.database_file_directory = input('\nEnter a directory to connect to an existing database file,'
@@ -114,7 +116,7 @@ class Main(DataBase):
             self.create_password_prompt()
             self._print_menu()
             self.ui_task_exec(sql)
-            password = self.database_password
+            # password = self.database_password
 
 
 
@@ -138,6 +140,9 @@ class Main(DataBase):
         print("*" * 15, "\n")
 
     def create_random_password(self, password_length):
+
+        print("\nDatabase file created in {}".format(self.database_file_directory))
+
         alphanum_selection = "abcdefghijklmnopqrstuvwxyz01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         special_char_selection = "!@#$%^&*()?~=-><\"'[]{}:;"
 
@@ -150,21 +155,21 @@ class Main(DataBase):
               password + "\n" + "*" * len(password) + "\n")
         self.store_password_in_database(self.sql_file, password)
 
-    def password_creation(self, input_value):
-        create_random_pw_check = input_value
-        if create_random_pw_check.lower() == "y":
-            length = input("Specify password length and hit Enter (12 is recommended)\n").strip()
-            while not length.isnumeric():
-                length = input("Specify password length and hit Enter (12 is recommended)\n")
-            self.create_random_password(int(length))
+    def start_password_creation(self):
+        password_creation = input("Would you like to create a new random password?\t(Y\\N)\n")
+        if password_creation.lower() == "y":
+            create_random_pw_length = input("Specify password length and hit Enter (12 is recommended)\n").strip()
+            while not create_random_pw_length.isnumeric():
+                create_random_pw_length = input("Specify password length and hit Enter (12 is recommended)\n")
+            self.create_random_password(int(create_random_pw_length))
 
-        elif create_random_pw_check.lower() == "n":
+        elif password_creation.lower() == "n":
             create_specific_pw_check = input("Would you like to create your own password?\t(Y\\N)\n")
             if create_specific_pw_check.lower() == "y":
                 specific_pw = input("Create your password and press Enter\n").strip()
                 self.store_password_in_database(self.sql_file, specific_pw)
             elif create_specific_pw_check.lower() == "n":
-                print("Password creation skipped.\nUsing default password: 123")
+                print("\nUsing default password: 123\n")
                 self.store_password_in_database(self.sql_file, "123")
 
         self.database_password = self.check_db_password(self.sql_file)
