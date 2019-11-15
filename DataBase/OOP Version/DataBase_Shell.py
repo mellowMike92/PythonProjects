@@ -4,16 +4,11 @@ import getpass
 
 
 class Main(DataBase):
-    database_password = '123'
 
     def __init__(self):
         super().__init__(sql_file=None, directory=None)
-        sql = self._create_or_connect_database()
-        self.password_database_init()
-        if self.check_password() is True:
-            print("Password verified!\n")
-            self._print_menu()
-            self.ui_task_exec(sql)
+        self.database_password = ''
+        self._create_or_connect_database()
 
     def ui_task_exec(self, sql):
         while True:
@@ -47,32 +42,32 @@ class Main(DataBase):
                         "(Files will not be deleted from Data Base)\n\n")
                     sql.delete_all_recovered_files(delete_all_recovered_confirmation, self.sql_file)
 
-                if task == 'df':
+                if task == "df":
                     delete_file = input("Type in the file name including the extension of the file "
                                         "you want to delete from the database.  Note: Case-sensitive"
                                         "\nExample: My_File.txt\n")
                     sql.delete_one_database_file(delete_file, self.sql_file)
 
-                if task == 'da':
+                if task == "da":
                     delete_all_database_files_confirmation = input("Are you sure you would like to delete all "
                                                                    "stored files from the database? (Y/N)\n")
 
                     sql.delete_all_database_files(delete_all_database_files_confirmation, self.sql_file)
 
-                if task == 'ls':
+                if task == "ls":
                     sql.list_stored_directories(self.sql_file)
 
-                if task == 'help':
+                if task == "help":
                     Main._print_menu()
 
-                if task == 'cwd':
+                if task == "cwd":
                     print(os.getcwd())
                     print(self.database_file_directory)
 
                 if task == "cd":
                     self._create_or_connect_database()
 
-                if task.startswith('q'):
+                if task.startswith("q"):
                     break
 
                 else:
@@ -83,32 +78,51 @@ class Main(DataBase):
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 print(exc_type, fname, exc_tb.tb_lineno)
 
-    def password_database_init(self):
+    def create_password_prompt(self):
         create_random_pw_check = input("Would you like to create a new random password?\t(Y\\N)\n")
         self.password_creation(create_random_pw_check)
-        print("Database file created in {}".format(self.database_file_directory))
-        print("Please enter your password.  (Default password is 123)")
+        print("\nDatabase file created in {}".format(self.database_file_directory))
 
     def _create_or_connect_database(self):
-        self.sql_file = input("\nEnter a new database filename to create or"
-                              " an existing database filename to connect to.\n")
-        if not self.sql_file.endswith('.db'):
-            self.sql_file = self.sql_file + '.db'
-        self.database_file_directory = input('Enter a directory to create the file in.\n'
+        self.database_file_directory = input('\nEnter a directory to connect to an existing database file,'
+                                             'or enter a directory to create a new database file.\n'
                                              'Type "c" for current directory.\n')
+        self.sql_file = input("\nEnter an existing database filename to connect to "
+                              "or a new database filename to create.\n")
         if self.database_file_directory == "c":
             self.database_file_directory = os.getcwd()
         else:
             self.database_file_directory = self.database_file_directory
-        sql = DataBase()
-        sql.create_database_file(sql_file=self.sql_file, directory=self.database_file_directory)
-        return sql
+
+        if not self.sql_file.endswith('.db'):
+            self.sql_file = self.sql_file + '.db'
+
+        if os.path.exists(self.database_file_directory+"\\"+self.sql_file):
+            print("\nDatabase found!\nConnecting to {} in {}\n".format(self.sql_file, self.database_file_directory))
+            sql = DataBase()
+            sql.connect_create_database_file(sql_file=self.sql_file, directory=self.database_file_directory)
+            self.database_password = sql.check_db_password(self.sql_file)
+            if self.check_password() is True:
+                print("Password verified!\n")
+                self._print_menu()
+                self.ui_task_exec(sql)
+
+        else:
+            print("\nCreating new database {} in {}".format(self.sql_file, self.database_file_directory))
+            sql = DataBase()
+            sql.connect_create_database_file(sql_file=self.sql_file, directory=self.database_file_directory)
+            self.create_password_prompt()
+            self._print_menu()
+            self.ui_task_exec(sql)
+            password = self.database_password
+
+
 
     @staticmethod
     def _print_menu():
         print("\n" + "*" * 15)
         print("Commands:")
-        print("cd = Create Database")
+        print("cd = Create new Database / Connect to other DataBase")
         print("rf = Recover File")
         print("rd = Recover Directory")
         print("sf = Store File")
@@ -132,9 +146,9 @@ class Main(DataBase):
         password_2 = "".join(random.sample(special_char_selection, int(half_length)))
         password = "".join(random.sample(password_1 + password_2, int(password_length)))
 
-        print("Write down this password!\n\n" + "*" * len(password) + "\n" +
+        print("\nPassword created.\nSave this database password for next time!\n\n" + "*" * len(password) + "\n" +
               password + "\n" + "*" * len(password) + "\n")
-        self.database_password = password
+        self.store_password_in_database(self.sql_file, password)
 
     def password_creation(self, input_value):
         create_random_pw_check = input_value
@@ -148,10 +162,12 @@ class Main(DataBase):
             create_specific_pw_check = input("Would you like to create your own password?\t(Y\\N)\n")
             if create_specific_pw_check.lower() == "y":
                 specific_pw = input("Create your password and press Enter\n").strip()
-                self.database_password = specific_pw
+                self.store_password_in_database(self.sql_file, specific_pw)
             elif create_specific_pw_check.lower() == "n":
-                print("Password creation skipped.\n"
-                      "Using default password of 123\n")
+                print("Password creation skipped.\nUsing default password: 123")
+                self.store_password_in_database(self.sql_file, "123")
+
+        self.database_password = self.check_db_password(self.sql_file)
 
     def check_password(self):
         connect = getpass.getpass(prompt="Please enter your password, or press q followed by Enter to quit:\n")
