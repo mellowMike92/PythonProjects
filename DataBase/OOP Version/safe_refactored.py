@@ -51,9 +51,7 @@ class EncodeDecode:
                 try:
                     self._decode_video_audio(filename_with_extension)
                 except Exception as e:
-                    exc_type, exc_obj, exc_tb = sys.exc_info()
-                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                    print(exc_type, fname, exc_tb.tb_lineno)
+                    print(e)
 
         self.extension = self._strip_filename(filename_with_extension)[1]
 
@@ -174,41 +172,34 @@ class DataBase(EncodeDecode):
     def directory(self, value):
         self._directory = value
 
-    @staticmethod
-    def _print_creating_file(sql_file, directory):
-        if directory is None:
-            directory = "current directory"
-        print("Creating file: {} in {} \n\nDatabase file created.".format(sql_file, directory))
-
-    def create_database_file(self, sql_file=None, directory=None):
+    def connect_create_database_file(self, sql_file=None, directory=None, password=None):
         if sql_file is None:
             sql_file = self.sql_file
+
         if directory is not None:
             os.chdir(directory)
-            self._print_creating_file(sql_file, directory)
-            self.initialize_database_file(sql_file)
-        elif directory is None:
-            directory = os.getcwd()
-            self._print_creating_file(sql_file, directory)
-            sqlite3.connect(self.sql_file)
-            self.initialize_database_file(sql_file)
+        else:
+            os.getcwd()
+
+        self.initialize_database_file(sql_file)
 
     def initialize_database_file(self, sql):
         database = self.connect_to_database_file(sql)
-
+        initialize_command = \
+            '''CREATE TABLE SAFE
+            (FILE_NAME TEXT PRIMARY KEY NOT NULL,
+            DIRECTORY TEXT NOT NULL,
+            NAME TEXT NOT NULL,
+            EXTENSION TEXT NOT NULL,
+            FILES TEXT NOT NULL);'''
         try:
-            database.execute('''CREATE TABLE SAFE
-                (FILE_NAME TEXT PRIMARY KEY NOT NULL,
-                DIRECTORY TEXT NOT NULL,
-                NAME TEXT NOT NULL,
-                EXTENSION TEXT NOT NULL,
-                FILES TEXT NOT NULL);''')
+            database.execute(initialize_command)
 
         except Exception as e:
             cursor = database.cursor()
             cursor.execute('SELECT * FROM SAFE')
             rows = cursor.fetchall()
-            print("Database found!\nSee contents below\n")
+            print("\nSee current database contents below:\n")
             for row in rows:
                 print('\t' + row[1] + '\\' + row[0])
             print('\n')
@@ -218,11 +209,10 @@ class DataBase(EncodeDecode):
         if directory is not None:
             os.chdir(directory)
         try:
-            # database_connect = sqlite3.connect(filename)
             return sqlite3.connect(sql_file)
         except Exception as e:
             print(e)
-            print("Could not connect to database.\n")
+            print("\nCould not connect to database.\n")
 
     def store_file_in_database(self, sql_file):
         store_file_command = self._create_store_file_command()
@@ -230,12 +220,21 @@ class DataBase(EncodeDecode):
         database.execute(store_file_command)
         database.commit()
 
-    def _create_store_file_command(self):
-        sql_file_name = str(self.file_name)
-        sql_file_extension = str(self.extension)
-        sql_full_filename = str(self.file_name) + "." + str(self.extension)
-        sql_file_string = str(self.file_string, "utf-8")
-        sql_database_file_dir = str(self.database_file_directory)
+    def _create_store_file_command(self, password=None):
+
+        if password is not None:
+            sql_full_filename = "__password__"
+            sql_database_file_dir = str(self.database_file_directory)
+            sql_file_name = "PASSWORD"
+            sql_file_extension = "__none__"
+            sql_file_string = password
+        else:
+            sql_full_filename = str(self.file_name) + "." + str(self.extension)
+            sql_database_file_dir = str(self.database_file_directory)
+            sql_file_name = str(self.file_name)
+            sql_file_extension = str(self.extension)
+            sql_file_string = str(self.file_string, "utf-8")
+
         store_file_command = 'INSERT or REPLACE INTO SAFE (FILE_NAME, DIRECTORY, NAME, EXTENSION, FILES)' \
                              ' VALUES (%s, %s, %s, %s, %s);' % ('"' + sql_full_filename + '"',
                                                                 '"' + sql_database_file_dir + '"',
@@ -255,20 +254,28 @@ class DataBase(EncodeDecode):
     def _database_file_recovery(cursor):
         recovered_files = []
         for row in cursor:
-            recovered_files.append(row[1] + "\\" + row[0])
+            if row[0] != "__password__":
+                recovered_files.append(row[1] + "\\" + row[0])
         return recovered_files
 
     def recover_file(self, recover_file, sql_file):
-        self._collect_binary_data(recover_file, sql_file)
+        self._collect_file_binary_data(recover_file, sql_file)
         self._process_file_type(recover_file, mode="decode")
 
-    def _collect_binary_data(self, recover_file, sql_file):
-        database = DataBase.connect_to_database_file(sql_file)
+    def _collect_file_binary_data(self, recover_file, sql_file):
+        database = self.connect_to_database_file(sql_file)
         filename = recover_file.split('\\')[-1]
         cursor = database.execute("SELECT * from SAFE WHERE FILE_NAME=" + '"' + filename + '"')
         self.file_string = ''
         for row in cursor:
             self.file_string += row[4]
+
+    def _collect_password(self, password, sql_file):
+        database = self.connect_to_database_file(sql_file)
+        cursor = database.execute("SELECT * from SAFE WHERE PASSWORD=" + '"' + password + '"')
+        self.file_string = ''
+        for row in cursor:
+            self.file_string += row[5]
 
     @staticmethod
     def delete_all_recovered_files(delete_all_recovered_confirmation, sql_file):
@@ -296,6 +303,7 @@ class DataBase(EncodeDecode):
             cursor.execute(delete_all_files_command)
             database.commit()
             print('\n\n...\n\n')
+            print("DataBase empty.  No password detected.")
             self.list_stored_directories(sql_file)
 
     def list_stored_directories(self, sql_file):
@@ -305,11 +313,11 @@ class DataBase(EncodeDecode):
         if file_directory is not None:
             os.chdir(file_directory)
         if os.path.exists(filename_with_extension):
-            print("File {} found!\nNow storing in {}...\n".format(filename_with_extension, sql_file))
+            print("\nFile {} found!\nNow storing in {}...\n".format(filename_with_extension, sql_file))
             self._process_file_type(filename_with_extension, mode="encode")
             self.store_file_in_database(sql_file)
         else:
-            print("File {} not found!\n".format(filename_with_extension))
+            print("\nFile {} not found!\n".format(filename_with_extension))
 
     def store_directory(self, store_directory_file_path, sql_file):
         protected_files = ["safe.py", sql_file, "DataBase_Shell.py", "safe_refactored.py"]
@@ -317,3 +325,17 @@ class DataBase(EncodeDecode):
             for name in files:
                 if name not in protected_files:
                     self.store_file(name, sql_file=sql_file)
+
+    def store_password_in_database(self, sql_file, password):
+        store_password_command = self._create_store_file_command(password)
+        database = self.connect_to_database_file(sql_file)
+        database.execute(store_password_command)
+        database.commit()
+
+    def check_db_password(self, sql_file):
+        database = self.connect_to_database_file(sql_file)
+        cursor = database.execute("SELECT * from SAFE WHERE NAME=" + '"' + "PASSWORD" + '"')
+        sql_password = ''
+        for row in cursor:
+            sql_password += row[4]
+        return sql_password
