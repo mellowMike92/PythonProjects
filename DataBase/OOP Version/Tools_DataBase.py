@@ -280,7 +280,7 @@ class DataBase(EncodeDecode):
     @staticmethod
     def delete_all_recovered_files(delete_all_recovered_confirmation, sql_file):
         if delete_all_recovered_confirmation.lower().startswith("y"):
-            protected_files = ["safe.py", sql_file, "DataBase_Shell.py", "safe_refactored.py"]
+            protected_files = [sql_file, "Tools_DataBase.py", "Main_DataBase.py"]
             for root, dirs, files in os.walk(os.getcwd()):
                 for name in files:
                     if name not in protected_files:
@@ -320,7 +320,7 @@ class DataBase(EncodeDecode):
             print("\nFile {} not found!\n".format(filename_with_extension))
 
     def store_directory(self, store_directory_file_path, sql_file):
-        protected_files = ["safe.py", sql_file, "DataBase_Shell.py", "safe_refactored.py"]
+        protected_files = [sql_file, "Tools_DataBase.py", "Main_DataBase.py"]
         for root, dirs, files in os.walk(store_directory_file_path):
             for name in files:
                 if name not in protected_files:
